@@ -15,17 +15,17 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 log_file_name = LOGS_DIR / f"{run_time}.log"
 
 #data directories
-DATA_DIR = PROJ_ROOT / "data"
-BRONZE_DIR = DATA_DIR/ "bronze"
-SILVER_DIR = DATA_DIR/ "silver"
-GOLD_DIR = DATA_DIR/ "gold"
+DATA_DIR = PROJ_ROOT/"data"
+BRONZE_DIR = DATA_DIR/"bronze"
+SILVER_DIR = DATA_DIR/"silver"
+GOLD_DIR = DATA_DIR/"gold"
 
 #model artifacts
-MODELS_DIR = PROJ_ROOT / "models"
+MODELS_DIR = PROJ_ROOT/"models"
 
 #reports and figures dir
-REPORTS_DIR = PROJ_ROOT / "reports"
-FIGURES_DIR = REPORTS_DIR / "figures"
+REPORTS_DIR = PROJ_ROOT/"reports"
+FIGURES_DIR = REPORTS_DIR/"figures"
 
 data_paths = {
 
@@ -33,9 +33,9 @@ data_paths = {
 
         "raw_paths" : {
 
-            "sales" : f"{BRONZE_DIR}/ raw/ sales.csv",
-            "calendar" : f"{BRONZE_DIR}/ raw/ calendar.csv",
-            "price" : f"{BRONZE_DIR}/ raw/ sell_prices.csv",
+            "sales" : f"{BRONZE_DIR}/raw/sales.csv",
+            "calendar" : f"{BRONZE_DIR}/raw/calendar.csv",
+            "price" : f"{BRONZE_DIR}/raw/sell_prices.csv",
         },
 
         "processed_data" : {
