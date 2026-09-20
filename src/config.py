@@ -7,7 +7,7 @@ run_time = now.strftime("%Y-%m-%d_%H-%M-%S")
 
 
 # Paths
-PROJ_ROOT = Path.cwd()
+PROJ_ROOT = Path(__file__).resolve().parent.parent
 
 #logs dir
 LOGS_DIR = PROJ_ROOT/"logs"/today_date
@@ -54,3 +54,6 @@ data_paths = {
     }
 
 
+filter_map = {
+    'sales_id_cols' : ['id','item_id','dept_id','cat_id','store_id','state_id'],
+}

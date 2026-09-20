@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 spark = SparkSession.builder.appName("M5-DF").getOrCreate()
+spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 
 def read_data(path:str,format:str="parquet")->DataFrame:
     """takes in path and data format and returns spark DataFrame"""
