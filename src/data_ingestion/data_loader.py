@@ -76,4 +76,53 @@ class DataMerger:
         return self.sales_long,self.calendar,self.price,self.joined_data
         
 
+class Preprocessor:
+    def __init__(self,joined_data:DataFrame,filter_map:dict[dict])->DataFrame:
+        self.joined_data = joined_data
+        self.filter_map = filter_map
+
+    def normalize_event_name(self,event):
+        return (
+            event.lower()
+            .replace(" ", "_")
+            .replace("'", "")
+            .replace("-", "_")
+        )
+
+    def add_yearmonth_quarter(self):
+        self.joined_data = self.joined_data.withColumn('year_month',F.concat(F.col('year'),F.lpad('month',2,'0')))\
+                            .withColumn('quarter',F.quarter('date'))\
+                            .withColumn('quarter',F.lpad('quarter',2,'0'))\
+                            .withColumn('year_week',F.concat(F.col('year'),F.lpad(F.weekofyear('date'),2,'0')))
+
+    def encode_events(self):     
+        event1_values = [r["event_name_1"] 
+                         for r in self.joined_data.select("event_name_1").distinct().collect() 
+                         if r["event_name_1"] is not None]
+
+        event2_values = [r["event_name_2"]
+                        for r in self.joined_data.select("event_name_2").distinct().collect()
+                        if r["event_name_2"] is not None
+                        ]
+
+        all_events = set(event1_values) | set(event2_values)
+
+        for event in all_events:
+
+            normalized_event = self.normalize_event_name(event)
+
+            self.joined_data = self.joined_data.withColumn(
+                f"f_event_{normalized_event}",
+                F.when(
+                    (F.col("event_name_1") == event) |
+                    (F.col("event_name_2") == event),
+                    1
+                ).otherwise(0)
+            )
+
+    def agg_joined_data(self):
+        joined_data_agg = self.joined_data.groupby(*self.filter_map['sales_id_cols']).agg()
+
+
+        
 
