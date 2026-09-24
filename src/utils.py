@@ -26,3 +26,5 @@ def write_data(df:DataFrame,path:str,partition_cols:list[str]|str)->None:
     df.write.format("parquet").partitionBy(*partition_cols).mode('overwrite').save(path)
 
 
+
+

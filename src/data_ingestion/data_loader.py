@@ -77,11 +77,11 @@ class DataMerger:
         
 
 class Preprocessor:
-    def __init__(self,joined_data:DataFrame,filter_map:dict[dict])->DataFrame:
+    def __init__(self, joined_data: DataFrame, filter_map: dict)->DataFrame:
         self.joined_data = joined_data
         self.filter_map = filter_map
 
-    def normalize_event_name(self,event):
+    def normalize_event_name(self, event):
         return (
             event.lower()
             .replace(" ", "_")
@@ -89,40 +89,49 @@ class Preprocessor:
             .replace("-", "_")
         )
 
-    def add_yearmonth_quarter(self):
-        self.joined_data = self.joined_data.withColumn('year_month',F.concat(F.col('year'),F.lpad('month',2,'0')))\
-                            .withColumn('quarter',F.quarter('date'))\
-                            .withColumn('quarter',F.lpad('quarter',2,'0'))\
-                            .withColumn('year_week',F.concat(F.col('year'),F.lpad(F.weekofyear('date'),2,'0')))
-
-    def encode_events(self):     
-        event1_values = [r["event_name_1"] 
-                         for r in self.joined_data.select("event_name_1").distinct().collect() 
-                         if r["event_name_1"] is not None]
-
-        event2_values = [r["event_name_2"]
-                        for r in self.joined_data.select("event_name_2").distinct().collect()
-                        if r["event_name_2"] is not None
-                        ]
+    def encode_events(self,joined_data):    
+        event1_values = [r["event_name_1"] for r in joined_data.select("event_name_1").distinct().collect() if r["event_name_1"] is not None]
+        event2_values = [r["event_name_2"] for r in joined_data.select("event_name_2").distinct().collect() if r["event_name_2"] is not None]
 
         all_events = set(event1_values) | set(event2_values)
 
+        event_exprs = {}
         for event in all_events:
-
             normalized_event = self.normalize_event_name(event)
+            event_exprs[f"f_event_{normalized_event}"] = F.when(
+                (F.col("event_name_1") == event) |
+                (F.col("event_name_2") == event),
+                1
+            ).otherwise(0)
 
-            self.joined_data = self.joined_data.withColumn(
-                f"f_event_{normalized_event}",
-                F.when(
-                    (F.col("event_name_1") == event) |
-                    (F.col("event_name_2") == event),
-                    1
-                ).otherwise(0)
-            )
+        joined_data_events_encoded = joined_data.withColumns(event_exprs)
+        return joined_data_events_encoded
 
-    def agg_joined_data(self):
-        joined_data_agg = self.joined_data.groupby(*self.filter_map['sales_id_cols']).agg()
-
-
+    def agg_joined_data(self,joined_data):
+        """
+        Aggregates daily M5 data to the wm_yr_wk weekly grain.
+        """
+        group_cols = self.filter_map['sales_id_cols'] + ['wm_yr_wk']
         
+        event_cols = [c for c in joined_data.columns if c.startswith('f_event_')]
+        
+        event_aggs = [F.max(c).alias(c) for c in event_cols]
 
+        self.weekly_data = joined_data.groupby(*group_cols).agg(
+            F.sum('sales').alias('weekly_sales'),
+            # Price is static per item per wm_yr_wk in M5, so first() is used
+            F.first('sell_price').alias('sell_price'), 
+            # Sum the SNAP flags to get the count of SNAP days in that week (0 to 7)
+            F.sum(F.col('snap_CA').cast('int')).alias('snap_CA_days'),
+            F.sum(F.col('snap_TX').cast('int')).alias('snap_TX_days'),
+            F.sum(F.col('snap_WI').cast('int')).alias('snap_WI_days'),
+            *event_aggs
+        )
+        return self.weekly_data
+
+    
+    def process(self):
+        joined_data_events_encoded = self.encode_events(self.joined_data)
+        weekly_data = self.agg_joined_data(joined_data_events_encoded)
+        return weekly_data
+  

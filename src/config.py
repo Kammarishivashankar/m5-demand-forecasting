@@ -56,6 +56,4 @@ data_paths = {
 
 filter_map = {
     'sales_id_cols' : ['id','item_id','dept_id','cat_id','store_id','state_id'],
-    'sales_groupby_cols' : ['id','item_id','dept_id','cat_id','store_id','state_id','year_week'],
-    'sales_agg_cols' : []
 }

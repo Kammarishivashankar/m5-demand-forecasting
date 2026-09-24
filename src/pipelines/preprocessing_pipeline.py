@@ -1,7 +1,6 @@
 import sys
-
-from src.config import data_paths
-from src.data_ingestion import DataLoader,DataMerger
+from src.config import data_paths, filter_map
+from src.data_ingestion import DataLoader,DataMerger,Preprocessor
 from src.logger import logger
 from src.exception import M5Exception
 
@@ -23,7 +22,7 @@ except Exception as e:
     logger.info("data_loader_obj.get_input_data run failed!")
     raise M5Exception(str(e),sys) from None
 
-#Data Transformer initialization
+#DataMerge initialization
 try:
     data_merger_obj = DataMerger(input_data)
     logger.info("DataMerger obj initialized successfully!")
@@ -33,10 +32,28 @@ except Exception as e:
 
 #merge raw datasets
 try:
-    joined_data = data_merger_obj.merge_raw_datasets()
+    sales_long, calendar,price,joined_data = data_merger_obj.merge_raw_datasets()
     logger.info("data_merger_obj.merge_raw_datasets ran successfully!")
 except Exception as e:
     logger.info("data_merger_obj.merge_raw_datasets run failed!")
     raise M5Exception(str(e),sys) from None
 
-print(joined_data)
+#Preprocessor initialization
+try:
+    preprocessor_obj = Preprocessor(joined_data,filter_map)
+    logger.info("Preprocessor obj initialized successfully!")
+except Exception as e:
+    logger.info("Preprocessor failed!")
+    raise M5Exception(str(e),sys) from None
+
+
+#proprecessing to weekly data
+try:
+    weekly_sales_data = preprocessor_obj.process()
+    logger.info("preprocessor_obj.process() successful!")
+except Exception as e:
+    logger.info("preprocessor_obj.process() failed!")
+    raise M5Exception(str(e),sys) from None
+
+print(weekly_sales_data)
+
