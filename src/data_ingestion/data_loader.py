@@ -4,7 +4,7 @@ import pyspark.sql.functions as f
 import sys
 
 from src.config import data_paths,filter_map
-from src.utils import read_data
+from src.utils import read_data, write_data
 from src.logger import logger
 from src.exception import M5Exception
 
@@ -133,5 +133,6 @@ class Preprocessor:
     def process(self):
         joined_data_events_encoded = self.encode_events(self.joined_data)
         weekly_data = self.agg_joined_data(joined_data_events_encoded)
+        write_data(weekly_data,data_paths['bronze']['processed_data']['joined_data'],['state_id'])
         return weekly_data
   

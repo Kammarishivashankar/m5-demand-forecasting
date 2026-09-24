@@ -1,6 +1,16 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
-spark = SparkSession.builder.appName("M5-DF").getOrCreate()
+
+spark = (
+    SparkSession.builder
+    .appName("M5-Demand-Forecasting")
+    .master("local[*]")
+    .config("spark.driver.memory", "4g")
+    .config("spark.executor.memory", "4g")
+    .getOrCreate()
+)
+
+
 spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 
 def read_data(path:str,format:str="parquet")->DataFrame:
