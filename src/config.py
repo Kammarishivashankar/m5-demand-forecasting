@@ -55,5 +55,8 @@ data_paths = {
 
 
 filter_map = {
+    'key_col' : 'id',
+    'yearweek_col' : 'yearweek',
+    'sales_col' : 'weekly_sales',
     'sales_id_cols' : ['id','item_id','dept_id','cat_id','store_id','state_id'],
 }

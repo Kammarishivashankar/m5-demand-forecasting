@@ -7,6 +7,7 @@ from src.config import data_paths,filter_map
 from src.utils import read_data, write_data
 from src.logger import logger
 from src.exception import M5Exception
+from pyspark.sql.window import Window
 
 
 class DataLoader:
@@ -105,13 +106,17 @@ class Preprocessor:
             ).otherwise(0)
 
         joined_data_events_encoded = joined_data.withColumns(event_exprs)
+        joined_data_events_encoded = joined_data_events_encoded.withColumn('week',F.weekofyear(F.col('date')))\
+                                                            .withColumn('week',F.lpad(F.col('week'),2,'0'))\
+                                                            .withColumn('yearweek',F.concat(F.col('year'),F.col('week')))
+        
         return joined_data_events_encoded
 
     def agg_joined_data(self,joined_data):
         """
         Aggregates daily M5 data to the wm_yr_wk weekly grain.
         """
-        group_cols = self.filter_map['sales_id_cols'] + ['wm_yr_wk']
+        group_cols = self.filter_map['sales_id_cols'] + ["yearweek"]
         
         event_cols = [c for c in joined_data.columns if c.startswith('f_event_')]
         
@@ -129,10 +134,19 @@ class Preprocessor:
         )
         return self.weekly_data
 
+    def leading_zero_sales_removal(self,joined_data):
+        window_spec = (Window.partitionBy(filter_map['key_col']).orderBy(filter_map['yearweek_col']).rowsBetween(Window.unboundedPreceding,Window.currentRow))
+        joined_data = joined_data\
+                .withColumn('cumsum_sales',F.sum(F.coalesce(F.col(filter_map['sales_col']), F.lit(0))).over(window_spec))\
+                .filter(F.col("cumsum_sales") > 0)\
+                .drop("cumsum_sales")
+        return joined_data
+        
     
     def process(self):
         joined_data_events_encoded = self.encode_events(self.joined_data)
         weekly_data = self.agg_joined_data(joined_data_events_encoded)
-        write_data(weekly_data,data_paths['bronze']['processed_data']['joined_data'],['state_id'])
-        return weekly_data
+        final_sales_data = self.leading_zero_sales_removal(weekly_data)
+        write_data(final_sales_data,data_paths['bronze']['processed_data']['joined_data'],['state_id'])
+        return final_sales_data
   
