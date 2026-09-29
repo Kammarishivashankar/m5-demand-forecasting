@@ -70,15 +70,17 @@ class DataMerger:
 
     
         self.price = self.input_data['price_raw']
-
+        event_flag_cond = ((F.col('event_name_1').isNotNull())|(F.col('event_name_2').isNotNull()))
         self.joined_data = self.sales_long.join(self.calendar,on=['d'],how='left')\
+                                            .withColumn('event_flag',F.when(event_flag_cond,F.lit(1)).otherwise(F.lit(0)))\
+                                            .withColumn('event_flag',F.col('event_flag').cast('byte'))\
                                             .join(self.price,on=['wm_yr_wk','store_id','item_id'],how='left')\
                                             .withColumn('week',F.weekofyear(F.col('date')))\
                                             .withColumn('week',F.lpad(F.col('week'),2,'0'))\
                                             .withColumn('yearweek',F.concat(F.col('year'),F.col('week')))\
                                             .select('id','yearweek','sales','sell_price',
                                     'event_name_1','event_type_1','event_name_2','event_type_2',
-                                    'snap_CA','snap_TX','snap_WI').distinct()
+                                    'snap_CA','snap_TX','snap_WI','event_flag').distinct()
         
         self.pro_cus_dim = self.sales_long.select('id','item_id','dept_id','cat_id','store_id','state_id').distinct()
         write_data(self.pro_cus_dim,data_paths['bronze']['processed_data']['product_customer_dim'],['state_id'])
@@ -130,13 +132,14 @@ class Preprocessor:
         event_aggs = [F.max(F.col(c).cast('byte')).alias(c) for c in event_cols]
 
         self.weekly_data = joined_data.groupby(*group_cols).agg(
-            F.sum('sales').alias('sales'),
+            F.sum('sales').cast('float').alias('sales'),
             # Price is static per item per wm_yr_wk in M5, so first() is used
-            F.first('sell_price').alias('sell_price'), 
+            F.first('sell_price').cast('float').alias('sell_price'), 
             # Sum the SNAP flags to get the count of SNAP days in that week (0 to 7)
-            F.sum(F.col('snap_CA').cast('byte')).alias('snap_CA_days'),
-            F.sum(F.col('snap_TX').cast('byte')).alias('snap_TX_days'),
-            F.sum(F.col('snap_WI').cast('byte')).alias('snap_WI_days'),
+            F.sum(F.col('snap_CA')).cast('byte').alias('snap_CA_days'),
+            F.sum(F.col('snap_TX')).cast('byte').alias('snap_TX_days'),
+            F.sum(F.col('snap_WI')).cast('byte').alias('snap_WI_days'),
+            F.max('event_flag').cast('byte').alias('event_flag'),
             *event_aggs
         )
         return self.weekly_data
