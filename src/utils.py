@@ -29,11 +29,13 @@ def read_data(path:str,format:str="parquet")->DataFrame:
         return spark.read.load(path)
 
 
-def write_data(df:DataFrame,path:str,partition_cols:list[str]|str)->None:
+def write_data(df:DataFrame,path:str,partition_cols:list[str]|str=None)->None:
     """taken in spark Dataframe, path where data has to be stored, 
     partition columns and saves the data to given path in parquet format"""
-
-    df.write.format("parquet").partitionBy(*partition_cols).mode('overwrite').save(path)
+    if partition_cols==None:
+            df.write.format("parquet").mode('overwrite').save(path)
+    else:
+        df.write.format("parquet").partitionBy(*partition_cols).mode('overwrite').save(path)
 
 
 

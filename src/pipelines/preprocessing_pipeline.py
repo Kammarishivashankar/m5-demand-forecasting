@@ -33,7 +33,7 @@ except Exception as e:
 
 #merge raw datasets
 try:
-    sales_long, calendar,price,joined_data = data_merger_obj.merge_raw_datasets()
+    sales_long, calendar,price,pro_cus_dim,joined_data = data_merger_obj.merge_raw_datasets()
     logger.info("data_merger_obj.merge_raw_datasets ran successfully!")
 except Exception as e:
     logger.exception("data_merger_obj.merge_raw_datasets run failed!")

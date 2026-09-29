@@ -39,11 +39,9 @@ data_paths = {
         },
 
         "processed_data" : {
-
+            "product_customer_dim" : f"{BRONZE_DIR}/processed_data/product_customer_dim",
             "sales_long" : f"{BRONZE_DIR}/processed_data/sales_long",
             "joined_data" : f"{BRONZE_DIR}/processed_data/joined_data",
-
-
         },
 
     },
@@ -57,6 +55,6 @@ data_paths = {
 filter_map = {
     'key_col' : 'id',
     'yearweek_col' : 'yearweek',
-    'sales_col' : 'weekly_sales',
+    'sales_col' : 'sales',
     'sales_id_cols' : ['id','item_id','dept_id','cat_id','store_id','state_id'],
 }

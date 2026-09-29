@@ -72,10 +72,19 @@ class DataMerger:
         self.price = self.input_data['price_raw']
 
         self.joined_data = self.sales_long.join(self.calendar,on=['d'],how='left')\
-                                            .join(self.price,on=['wm_yr_wk','store_id','item_id'],how='left')
+                                            .join(self.price,on=['wm_yr_wk','store_id','item_id'],how='left')\
+                                            .withColumn('week',F.weekofyear(F.col('date')))\
+                                            .withColumn('week',F.lpad(F.col('week'),2,'0'))\
+                                            .withColumn('yearweek',F.concat(F.col('year'),F.col('week')))\
+                                            .select('id','yearweek','sales','sell_price',
+                                    'event_name_1','event_type_1','event_name_2','event_type_2',
+                                    'snap_CA','snap_TX','snap_WI').distinct()
         
-        return self.sales_long,self.calendar,self.price,self.joined_data
+        self.pro_cus_dim = self.sales_long.select('id','item_id','dept_id','cat_id','store_id','state_id').distinct()
+        write_data(self.pro_cus_dim,data_paths['bronze']['processed_data']['product_customer_dim'],['state_id'])
         
+        return self.sales_long,self.calendar,self.price,self.pro_cus_dim,self.joined_data
+
 
 class Preprocessor:
     def __init__(self, joined_data: DataFrame, filter_map: dict)->DataFrame:
@@ -106,9 +115,6 @@ class Preprocessor:
             ).otherwise(0)
 
         joined_data_events_encoded = joined_data.withColumns(event_exprs)
-        joined_data_events_encoded = joined_data_events_encoded.withColumn('week',F.weekofyear(F.col('date')))\
-                                                            .withColumn('week',F.lpad(F.col('week'),2,'0'))\
-                                                            .withColumn('yearweek',F.concat(F.col('year'),F.col('week')))
         
         return joined_data_events_encoded
 
@@ -116,20 +122,21 @@ class Preprocessor:
         """
         Aggregates daily M5 data to the wm_yr_wk weekly grain.
         """
-        group_cols = self.filter_map['sales_id_cols'] + ["yearweek"]
+        # group_cols = self.filter_map['sales_id_cols'] + ["yearweek"]
+        group_cols = ['id','yearweek']
         
         event_cols = [c for c in joined_data.columns if c.startswith('f_event_')]
         
-        event_aggs = [F.max(c).alias(c) for c in event_cols]
+        event_aggs = [F.max(F.col(c).cast('byte')).alias(c) for c in event_cols]
 
         self.weekly_data = joined_data.groupby(*group_cols).agg(
-            F.sum('sales').alias('weekly_sales'),
+            F.sum('sales').alias('sales'),
             # Price is static per item per wm_yr_wk in M5, so first() is used
             F.first('sell_price').alias('sell_price'), 
             # Sum the SNAP flags to get the count of SNAP days in that week (0 to 7)
-            F.sum(F.col('snap_CA').cast('int')).alias('snap_CA_days'),
-            F.sum(F.col('snap_TX').cast('int')).alias('snap_TX_days'),
-            F.sum(F.col('snap_WI').cast('int')).alias('snap_WI_days'),
+            F.sum(F.col('snap_CA').cast('byte')).alias('snap_CA_days'),
+            F.sum(F.col('snap_TX').cast('byte')).alias('snap_TX_days'),
+            F.sum(F.col('snap_WI').cast('byte')).alias('snap_WI_days'),
             *event_aggs
         )
         return self.weekly_data
@@ -147,6 +154,6 @@ class Preprocessor:
         joined_data_events_encoded = self.encode_events(self.joined_data)
         weekly_data = self.agg_joined_data(joined_data_events_encoded)
         final_sales_data = self.leading_zero_sales_removal(weekly_data)
-        write_data(final_sales_data,data_paths['bronze']['processed_data']['joined_data'],['state_id'])
+        write_data(final_sales_data,data_paths['bronze']['processed_data']['joined_data'])
         return final_sales_data
   
