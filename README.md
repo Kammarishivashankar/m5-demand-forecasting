@@ -14,9 +14,9 @@ E2E demand forecasting solution
 ├── README.md          <- The top-level README for developers using this project.
 ├── data
 │   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
-│   └── raw            <- The original, immutable data dump.
+│   ├── gold           <- Data for reporting.
+│   ├── silver         <- The final, canonical data sets for modeling.
+│   └── bronze         <- The original, immutable data dump.
 │
 ├── docs               <- A default mkdocs project; see www.mkdocs.org for details
 │
@@ -53,8 +53,7 @@ E2E demand forecasting solution
     │   ├── __init__.py 
     │   ├── predict.py          <- Code to run model inference with trained models          
     │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
+
 ```
 
 --------

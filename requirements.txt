@@ -1,22 +1,4 @@
-loguru
-mkdocs
-pip
-python-dotenv
-ruff
-tqdm
-typer
-shap
-streamlit
 pyspark==4.1.3
-ipykernel
-xgboost
-lightgbm
-catboost
-statsmodels
-scikit-learn
-seaborn
-matplotlib
-pandas
-numpy
 statsforecast
+mlforecast
 -e .
